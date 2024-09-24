@@ -21,7 +21,6 @@ class ErrorResponse(BaseResponse):
 
 
 class ValidationErrorResponse(ErrorResponse):
-    success: bool = False
     message: str = "Validation error"
     errors: list[ErrorDetails]
 
