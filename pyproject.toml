@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi_scaffold"
+version = "0.1.0"
+description = "FastAPI anti-boilerplate code to structure your API."
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12"
+]
+dynamic = ["dependencies"]
+
+[tool.setuptools]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+where = ["src"]
