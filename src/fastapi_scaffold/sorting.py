@@ -18,6 +18,18 @@ def get_sort_params(
         *sort_options: Unpack[tuple[str]],
         default: str | None = None,
 ) -> SortParams:
+    """Dynamically creates a FastAPI dependency for sorting parameters.
+
+    Args:
+        *sort_options: A tuple of strs representing the allowed
+            sorting fields.
+        default: The default field to sort by. If not provided,
+            the first option in `sort_options` is used.
+
+    Returns:
+        A FastAPI dependency that provides sorting parameters (`sort_by`
+        and `order_by`) through query parameters.
+    """
     try:
         default = default or next(iter(sort_options))
     except StopIteration:

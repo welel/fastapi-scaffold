@@ -30,7 +30,7 @@ def get_pagination_params(
 PaginationParamsQuery = Annotated[
     PaginationParams, Depends(get_pagination_params)
 ]
-"""TODO: add doc"""
+"""Pagination query parameters - `page`, `per_page`."""
 
 
 class PaginationSchema(BaseModel):
@@ -73,23 +73,23 @@ class PaginationSchema(BaseModel):
 
     @classmethod
     def from_params(
-            cls, pagination: PaginationParams, total: int
+            cls, params: PaginationParams, total: int
     ) -> Self:
         """Create instance from pagination params and total items count.
 
         Args:
-            pagination: ...
+            params: Pagination params.
             total: A total number of items available for the pagination.
 
         Returns:
-            ...
+            The schema instance with calculated fields.
         """
-        is_last_page = pagination.page * pagination.per_page >= total
+        is_last_page = params.page * params.per_page >= total
         return cls(
             total_items=total,
-            page=pagination.page,
-            per_page=pagination.per_page,
-            next_page=pagination.page + 1 if not is_last_page else None,
-            prev_page=pagination.page - 1 if pagination.page > 1 else None,
-            total_pages=math.ceil(total / pagination.per_page),
+            page=params.page,
+            per_page=params.per_page,
+            next_page=params.page + 1 if not is_last_page else None,
+            prev_page=params.page - 1 if params.page > 1 else None,
+            total_pages=math.ceil(total / params.per_page),
         )
