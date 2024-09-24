@@ -131,8 +131,8 @@ def init_responses(
 ) -> None:
     """Inits responses for 422 (validation) and 500 errors."""
     app.router.responses[http.HTTPStatus.UNPROCESSABLE_ENTITY] = (
-        validation_response
+        {"model": validation_response}
     )
     app.router.responses[http.HTTPStatus.INTERNAL_SERVER_ERROR] = (
-        internal_server_error_response
+        {"model": internal_server_error_response}
     )

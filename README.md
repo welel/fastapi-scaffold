@@ -237,7 +237,7 @@ class Address(Schema):
 	country: str
 	city: str
 
-class UserData:
+class UserData(Schema):
 	user: User
 	address: Address
 
@@ -247,9 +247,9 @@ class UserData:
 	response_model=DataResponse[UsersData],
 )
 async def get_user(...):
-    user = User("Name", 22)
-    address = Address("Russia", "Sochi")
-	return DataResponse(data=UserData(user=user, address=address))
+    user = User(name=f"Name", age=22)
+    address = Address(country="Russia", city="Sochi")
+	  return DataResponse(data=UserData(user=user, address=address))
 ```
 
 Swagger схема и ответ будут следующей структуры:
@@ -284,8 +284,8 @@ from fastapi_scaffold import Schema, DataResponse
 	response_model=DataResponse.single_by_key("user", User),
 )
 async def get_user():
-    user = User("Name", 22)
-	return DataResponse(data={"user": user})
+    user = User(name="Name", age=22)
+	  return DataResponse(data={"user": user})
 ```
 
 Swagger схема и ответ будут следующей структуры:
