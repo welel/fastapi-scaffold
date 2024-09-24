@@ -1,5 +1,5 @@
 import http
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, APIRouter
 from pydantic import Field
 
 from fastapi_scaffold.http_responses import responses_for_codes
@@ -74,7 +74,10 @@ def get_user_list_(
     )
 
 
-@app.get(
+router = APIRouter(prefix="/errors", tags=["Error"])
+
+
+@router.get(
         "/request-with-http-error/",
         response_model=DataResponse.single_by_key("user", User),
 )
@@ -85,9 +88,12 @@ def get_with_http_error_():
     )
 
 
-@app.post(
+@router.post(
         "/request-with-uncaught-error/",
         response_model=DataResponse.single_by_key("user", User),
 )
 def create_user_with_error_(user: User):
     raise Exception("Some error")
+
+
+app.include_router(router)
