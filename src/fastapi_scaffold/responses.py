@@ -1,6 +1,7 @@
 from typing import Self, Sequence
 
 from pydantic import BaseModel, ConfigDict, create_model
+from pydantic_core import ErrorDetails
 
 from .pagination import PaginationParams, PaginationSchema
 
@@ -12,6 +13,20 @@ class Schema(BaseModel):
 class BaseResponse(Schema):
     success: bool = True
     message: str = ""
+
+
+class ErrorResponse(BaseResponse):
+    success: bool = False
+    message: str = "Error"
+
+
+class ValidationErrorResponse(ErrorResponse):
+    message: str = "Validation error"
+    errors: list[ErrorDetails]
+
+
+class DebugErrorResponse(ErrorResponse):
+    traceback: str
 
 
 class DataResponse[Data](BaseResponse):

@@ -1,17 +1,35 @@
 from fastapi import Depends, FastAPI
+from pydantic import Field
 
 from fastapi_scaffold.http_responses import responses_for_codes
-from fastapi_scaffold.responses import DataResponse, ListResponse, Schema
+from fastapi_scaffold.exception_handlers import init_exc_handlers
+from fastapi_scaffold.responses import (
+    DataResponse,
+    ListResponse,
+    Schema,
+    ValidationErrorResponse,
+)
 from fastapi_scaffold.pagination import PaginationParamsQuery
 from fastapi_scaffold.sorting import get_sort_params, SortParams
 
 
-app = FastAPI()
+DEBUG = True
+
+
+app = FastAPI(
+    responses={
+        422: {"model": ValidationErrorResponse},
+        **responses_for_codes(500),
+    }
+)
+
+
+init_exc_handlers(app, debug=DEBUG)
 
 
 class User(Schema):
     name: str
-    age: int
+    age: int = Field(..., ge=0)
 
 
 @app.post("/users/", response_model=DataResponse.single_by_key("user", User))
@@ -75,3 +93,12 @@ def get_user_list_(
   }
 }
 """
+
+
+@app.post(
+        "/users-with-error/",
+        response_model=DataResponse.single_by_key("user", User),
+)
+def create_user_with_error_(user: User):
+    raise Exception("Some error")
+    return DataResponse(data={"user": user})
