@@ -5,11 +5,10 @@ from typing import Callable
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
-from fastapi_scaffold import http_responses
-from fastapi_scaffold.http_responses import Response500
+from fastapi_scaffold.http_responses import http_responses, Response500
 from fastapi_scaffold.responses import (
-    BaseResponse,
     DebugErrorResponse,
     ValidationErrorResponse,
 )
@@ -88,10 +87,12 @@ async def http_exception_handler(
     Returns:
         JSONResponse http response corresponding to `exc` code.
     """
-    schema: BaseResponse = http_responses.get(exc.status_code, Response500)
+    response = http_responses.get(exc.status_code, Response500)()
+    if exc.detail:
+        response.message = str(exc.detail)
     return JSONResponse(
         status_code=exc.status_code,
-        content=schema(message=str(exc.detail)).model_dump(mode="json"),
+        content=response.model_dump(mode="json"),
     )
 
 
@@ -117,8 +118,21 @@ def init_exc_handlers(
     """
     app.exception_handler(HTTPException)(http_exception_handler)
     app.exception_handler(RequestValidationError)(validation_error_handler)
-
     if debug:
         app.exception_handler(Exception)(debug_exception_handler)
     else:
         app.exception_handler(Exception)(exception_handler)
+
+
+def init_responses(
+        app: FastAPI,
+        validation_response: BaseModel = ValidationErrorResponse,
+        internal_server_error_response: BaseModel = Response500,
+) -> None:
+    """Inits responses for 422 (validation) and 500 errors."""
+    app.router.responses[http.HTTPStatus.UNPROCESSABLE_ENTITY] = (
+        validation_response
+    )
+    app.router.responses[http.HTTPStatus.INTERNAL_SERVER_ERROR] = (
+        internal_server_error_response
+    )

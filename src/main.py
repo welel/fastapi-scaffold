@@ -2,7 +2,10 @@ from fastapi import Depends, FastAPI
 from pydantic import Field
 
 from fastapi_scaffold.http_responses import responses_for_codes
-from fastapi_scaffold.exception_handlers import init_exc_handlers
+from fastapi_scaffold.exception_handlers import (
+    init_exc_handlers,
+    init_responses,
+)
 from fastapi_scaffold.responses import (
     DataResponse,
     ListResponse,
@@ -17,13 +20,13 @@ DEBUG = True
 
 
 app = FastAPI(
-    responses={
-        422: {"model": ValidationErrorResponse},
-        **responses_for_codes(500),
-    }
+    # responses={
+    #     422: {"model": ValidationErrorResponse},
+    #     **responses_for_codes(500),
+    # }
 )
 
-
+init_responses(app)
 init_exc_handlers(app, debug=DEBUG)
 
 

@@ -127,6 +127,14 @@ http_responses = _gather_http_responses()
 def responses_for_codes(
         *codes: Unpack[tuple[StatusCode]]
 ) -> dict[StatusCode, dict[str, BaseResponse]]:
+    """Gets http responses for HTTP status codes.
+
+    Args:
+        *codes: A tuple of http status codes to return schema for.
+
+    Returns:
+        Returns http responses as FastAPI responses argument.
+    """
     responses = {}
     for code in sorted(codes):
         response = http_responses.get(code, BaseResponse)
