@@ -1,9 +1,9 @@
 from http import HTTPStatus
 from typing import Unpack
 
-from pydantic import Field, create_model
+from fastapi_scaffold.responses import BaseResponse
 
-from .responses import BaseResponse
+from pydantic import Field, create_model
 
 
 type StatusCode = int

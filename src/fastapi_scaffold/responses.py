@@ -1,9 +1,9 @@
 from typing import Iterable, Self, Sequence
 
+from fastapi_scaffold.pagination import PaginationParams, PaginationSchema
+
 from pydantic import BaseModel, ConfigDict, create_model
 from pydantic_core import ErrorDetails
-
-from .pagination import PaginationParams, PaginationSchema
 
 
 class Schema(BaseModel):
