@@ -1,9 +1,9 @@
 from http import HTTPStatus
-from typing import Unpack
+from typing import Final, Unpack
+
+from fastapi_scaffold.responses import BaseResponse
 
 from pydantic import Field, create_model
-
-from .responses import BaseResponse
 
 
 type StatusCode = int
@@ -121,7 +121,7 @@ def _gather_http_responses() -> dict[StatusCode, BaseResponse]:
     return responses
 
 
-http_responses = _gather_http_responses()
+http_responses: Final = _gather_http_responses()
 
 
 def responses_for_codes(
