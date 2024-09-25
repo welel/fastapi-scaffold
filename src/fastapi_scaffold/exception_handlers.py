@@ -116,12 +116,12 @@ def init_exc_handlers(
     Args:
         app: The FastAPI application instance.
     """
-    app.exception_handler(HTTPException)(http_exception_handler)
-    app.exception_handler(RequestValidationError)(validation_error_handler)
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_error_handler)
     if debug:
-        app.exception_handler(Exception)(debug_exception_handler)
+        app.add_exception_handler(Exception, debug_exception_handler)
     else:
-        app.exception_handler(Exception)(exception_handler)
+        app.add_exception_handler(Exception, exception_handler)
 
 
 def init_responses(
