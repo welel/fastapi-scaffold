@@ -1,14 +1,14 @@
 import http
 import traceback
-from typing import Callable
+from typing import Callable, Type
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
 from fastapi_scaffold.http_responses import http_responses, Response500
 from fastapi_scaffold.responses import (
+    BaseResponse,
     DebugErrorResponse,
     ValidationErrorResponse,
 )
@@ -126,8 +126,8 @@ def init_exc_handlers(
 
 def init_responses(
         app: FastAPI,
-        validation_response: BaseModel = ValidationErrorResponse,
-        internal_server_error_response: BaseModel = Response500,
+        validation_response: Type[BaseResponse] = ValidationErrorResponse,
+        internal_server_error_response: Type[BaseResponse] = Response500,
 ) -> None:
     """Inits responses for 422 (validation) and 500 errors."""
     app.router.responses[http.HTTPStatus.UNPROCESSABLE_ENTITY] = (
