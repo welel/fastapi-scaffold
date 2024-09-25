@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Unpack
+from typing import Final, Unpack
 
 from fastapi_scaffold.responses import BaseResponse
 
@@ -121,7 +121,7 @@ def _gather_http_responses() -> dict[StatusCode, BaseResponse]:
     return responses
 
 
-http_responses = _gather_http_responses()
+http_responses: Final = _gather_http_responses()
 
 
 def responses_for_codes(
