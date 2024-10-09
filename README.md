@@ -214,12 +214,12 @@ async def ping():
 from fastapi_scaffold import Response200
 
 @app.get(
-	'/ping',
-	response_model=Response200,
-    responses=responses_for_codes(401, 402, 500),
+    '/ping',
+    response_model=Response200,
+    responses=responses_for_codes(401, 402, 500),
 )
 async def ping(...):
-	return Response200()
+    return Response200()
 ```
 
 ### Ответ с данными
@@ -371,27 +371,29 @@ init_responses(app)  # Установит базовые 422, 500
 init_exc_handlers(app)  # Инициализирует обработчики
 ```
 
-#### Пример использования HTTPException
+#### HTTP ошибки
 
-Ошибочные ответы возвращаются автоматически при возникновении `HTTPException`.
+`ScaffoldException` это расширение класса `starlette.exceptions.HTTPException` с изменённым интерфейсом. Ошибочные ответы возвращаются автоматически при возникновении `ScaffoldException`/`HTTPException`. Существуют отдельные классы для часто используемых ошибок.
 
 ```python
 import http
 
-from fastapi import HTTPException
-from fastapi_scaffold import DataResponse, responses_for_codes
+from fastapi_scaffold.exc import ScaffoldException, InternalServerError
 
 @app.get(
 	'/users/{user_id}',
-	# Сгенерирует схему с data = {"user": <user>}
 	response_model=DataResponse.single_by_key("user", User),
 	responses=responses_for_codes(400, 404, 500),
 )
 async def get_user(user_id: int):
-    raise HTTPException(
+
+    raise ScaffoldException(
+	    f"User with ID {user_id} isn't found",
 	    status_code=http.HTTPStatus.NOT_FOUND,
-	    detail=f"User with ID {user_id} isn't found",
     )
+
+    # Пример часто используемой ошибоки.
+    raise InternalServerError()
 ```
 
 Swagger схема и ответ будут следующей структуры:
@@ -400,14 +402,185 @@ Swagger схема и ответ будут следующей структур�
 {
   "success": False,
   "message": "User with ID 12 isn't found"
-  # Если в detail пусто, то будет "Not found"
 }
 ```
 
-#### Ошибка валидации
+#### Ошибки валидации
 
-pydantic
+FastAPI завязан на pydantic, поэтому ошибки валидации рекомендуется формировать в [стиле pydantic](https://docs.pydantic.dev/latest/errors/errors/).
+
+К ошибкам валидации относятся:
+  - ошибки валидации схем pydantic (возникают автоматически);
+  - ошибки в query параметрах;
+  - логические ошибки в данных.
+
+Пример логической ошибки в данных: передали объект на создание с некоторым foreign key на другой объект, которого не существует в БД.
+
+**Pydantic error:**
+
+- **type**: [Тип ошибки](https://docs.pydantic.dev/latest/errors/validation_errors/). Может быть кастомный. В основном используется `"value_error"`, он подходит под большинство случаев.
+- **loc**: Путь до поля с ошибкой. В теле запроса начинается с `"body"`, в query параметрах с `"query"`. Пример: `{"user": {"name": "John"}}`, если ошибка в поле *name*, то `loc = ("body", "user", "name")`.
+- **msg**: Человекочитаемое сообщение об ошибке. Может быть в виде f-строки, тогда параметры необходимо передать в **ctx**.
+- **input**: Значение в котором ошибка.
+- **ctx**: Контекст для форматирования **msg**.
+
+##### Формирование ошибок валидации
+
+**Порядок валидации данных:**
+
+  1. Написание схем с валидацией типов и ограничений `Field`.
+  2. Добавление валидации через декоратор `@validate`.
+  3. Возбуждение `fastapi_scaffold.exc.ValidationError`.
+
+Как пользоваться первыми двумя шагами описано в [документации pydantic](https://docs.pydantic.dev/latest/). Рассмотрим примеры возбуждения ошибки валидации данной библиотеки.
+
+```python
+from fastapi_scaffold.exc import ErrorDetails, ValidationError
+
+class Service(Schema):
+    id: int
+    host: str
+
+class CreateUser(Schema):
+    name: str = Field(..., examples=["John"])
+    service: Service
+
+@app.post(
+        "/users",
+        response_model=DataResponse.single_by_key("user", CreateUser),
+)
+def create_user_with_service(
+    user: CreateUser,
+    start: int = Query(0),
+    end: int = Query(0),
+    app: str = Query("default"),
+):
+
+    # ValidationError принимает список ErrorDetails.
+
+    # Полноценный пример исключения.
+    if user.service.id == 0:
+        raise ValidationError([
+            ErrorDetails(
+                type=ErrorDetails.Type.value_error,
+                loc=("body", "user", "service", "id"),
+                msg="Service with ID {service_id} doesn't exist",
+                input=user.service.id,
+                ctx={"service_id": user.service.id},
+            )
+        ])
+
+    # Короткая форма исключения.
+    if user.service.id == 1:
+        raise ValidationError([
+            ErrorDetails(
+                type="value_error",
+                loc=("body", "user", "service", "id"),
+                msg=f"Service with ID {user.service.id} doesn't exist",
+                input=user.service.id,
+            )
+        ])
+
+    # Ещё короче, без f-строки, потому что ID можно увидеть в input.
+    # Такое можно использовать, если ошибка предназначается
+    # разработчику, а не пользователю.
+    if user.service.id == 2:
+        raise ValidationError([
+            ErrorDetails(
+                type="value_error",
+                loc=("body", "user", "service", "id"),
+                msg="Service with this ID doesn't exist",
+                input=user.service.id,
+            )
+        ])
+
+    # Ошибка валидации query параметра.
+    if app != "default":
+        raise ValidationError([
+            ErrorDetails(
+                type="value_error",
+                loc=("query", "app"),
+                msg="App doesn't exist (accepts only 'default')",
+                input=app,
+            )
+        ])
+
+    # Обобщённая ошибка, когда задействовано несколько полей.
+    if start > end:
+        raise ValidationError([
+            ErrorDetails(
+                type="value_error",
+                loc=("query",),
+                msg=f"Start {start} more than end {end}",
+                input=(start, end),
+            )
+        ])
+
+    return DataResponse(data={"user": user})
+```
+
+Swagger схема ошибок валидации:
+
+```python
+{
+  "success": false,
+  "message": "Validation error",
+  "errors": [
+    {
+      "type": "value_error",
+      "loc": [
+        "body",
+        "user",
+        "service",
+        "id"
+      ],
+      "msg": "Service with ID 0 doesn't exist",
+      "input": 0,
+      "ctx": {
+        "service_id": 0
+      }
+    }
+  ]
+}
+```
 
 #### Неотловленные ошибки
 
 При возникновении исключения, которое не было отловлено в реализации точки, вернётся `Response500`. Если при инициализации обработчиков был передан флаг debug = True, тогда к базовому ответу будет добавлен traceback, а к message сообщение об ошибке.
+
+
+## Работа с запросом
+
+### Пагинация
+
+**Пример использования paginate:**
+
+Функция возвращает кортеж из двух элементов: список запрошенных объектов и общее количество объектов до применения пагинации.
+
+```python
+from fastapi_scaffold import PaginationParamsQuery, paginate
+
+@app.get('/articles')
+async def get_articles(
+    pagination: PaginationParamsQuery,
+    session: AsyncSession = Depends(get_session()),
+):
+    stmt = select(Article).where(Article.is_original.is_(True))
+    articles, count = paginate(session, stmt, pagination=pagination)
+```
+
+### Сортировка
+
+**Пример использования sort:**
+
+```python
+from fastapi_scaffold import get_sort_params, SortParams, sort
+
+@app.get('/articles')
+async def get_articles(
+    sorting: SortParams = Depends(get_sort_params("title", "created_at")),
+    session: AsyncSession = Depends(get_session()),
+):
+    stmt = select(Article).where(Article.is_original.is_(True))
+    stmt = sort(stmt, sorting=sorting)
+```
