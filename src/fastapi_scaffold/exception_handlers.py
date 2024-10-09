@@ -5,15 +5,14 @@ from typing import Callable, Type
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from fastapi_scaffold.http_responses import http_responses, Response500
+from fastapi_scaffold.http_responses import Response500, http_responses
 from fastapi_scaffold.responses import (
     BaseResponse,
     DebugErrorResponse,
     ValidationErrorResponse,
 )
-
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 type ExceptionHandler = Callable[[Request, Exception], Response]

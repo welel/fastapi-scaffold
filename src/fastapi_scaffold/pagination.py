@@ -1,8 +1,12 @@
 import math
-from typing import Annotated, NamedTuple, Self
+from collections.abc import Sequence
+from typing import Annotated, Any, NamedTuple, Self
 
+import sqlalchemy as sa
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql._typing import _ColumnsClauseArgument
 
 
 class PaginationParams(NamedTuple):
@@ -93,3 +97,54 @@ class PaginationSchema(BaseModel):
             prev_page=params.page - 1 if params.page > 1 else None,
             total_pages=math.ceil(total / params.per_page),
         )
+
+
+async def paginate(
+    session: AsyncSession,
+    statement: sa.Select[Any],
+    *,
+    pagination: PaginationParams,
+    count_clause: _ColumnsClauseArgument[Any] | None = None,
+) -> tuple[Sequence[Any], int]:
+    """Paginates query by pagination params, returns result and total count.
+
+    Args:
+        session: The SQLAlchemy session.
+        statement: The SQLAlchemy `SELECT` statement to paginate.
+        pagination: Pagination params.
+        count_clause: Custom count clause. If not provided, the total
+            count will be calculated using the `COUNT() OVER ()`
+            window function.
+
+    Returns:
+        - List selected items with applied pagination.
+        - The total number of rows that match the query before pagination
+            is applied.
+
+    Example:
+        >>> pagination = PaginationParams(page=2, limit=10)
+        >>> stmt = select(User).where(User.is_active == True)
+        >>> users, total = await paginate(session, stmt, pagination=pagination)
+
+    """
+    offset = pagination.per_page * (pagination.page - 1)
+    statement = statement.offset(offset).limit(pagination.per_page)
+
+    if count_clause is None:
+        statement = statement.add_columns(sa.over(sa.func.count()))
+    else:
+        statement = statement.add_columns(count_clause)
+
+    result = await session.execute(statement)
+
+    rows: list[Any] = []
+    count = 0
+    for row in result.unique().all():
+        (*queried_data, c) = row._tuple()
+        count = int(c)
+        if len(queried_data) == 1:
+            rows.append(queried_data[0])
+        else:
+            rows.append(queried_data)
+
+    return rows, count

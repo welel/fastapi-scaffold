@@ -1,9 +1,9 @@
-from typing import Iterable, Self, Sequence
-
-from fastapi_scaffold.pagination import PaginationParams, PaginationSchema
+from typing import Iterable, Self, Sequence, Type
 
 from pydantic import BaseModel, ConfigDict, create_model
 from pydantic_core import ErrorDetails
+
+from fastapi_scaffold.pagination import PaginationParams, PaginationSchema
 
 
 class Schema(BaseModel):
@@ -45,7 +45,7 @@ class DataResponse[Data](BaseResponse):
     data: Data
 
     @classmethod
-    def single_by_key(cls, key: str, schema: BaseModel) -> Self:
+    def single_by_key(cls, key: str, schema: BaseModel | Type) -> Self:
         """Generates schema with single object in `data` placed by `key`."""
         data_model = create_model(schema.__name__, **{key: (schema, ...)})
         return cls[data_model]
